@@ -2,6 +2,7 @@
 raw_trade_data.csv 무역 데이터 분석 및 시각화 대시보드
 실행방법: streamlit run day4/9-8-1.py
 """
+# 수정 ver.1
 
 import os
 import pandas as pd
