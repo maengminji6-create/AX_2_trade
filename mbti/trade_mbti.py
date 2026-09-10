@@ -1,6 +1,5 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import plotly.graph_objects as go
 
 # ---------------------------------------------------------
 # 1. 페이지 설정 및 세련된 연두/민트(Light Green & Mint) 스타일링
@@ -610,44 +609,50 @@ elif st.session_state.step == "result":
             height=60
         )
 
-    # [2] 4축 레이더 차트 (MBTI 성향 가시화)
+    # [2] 순수 SVG 기반 4각형 레이더 차트
     with st.container(border=True):
         st.markdown('<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; color: #064E3B;">🧭 나의 무역 MBTI 성향 다이어그램</h3>', unsafe_allow_html=True)
         st.caption("각 축의 100%에 가까울수록 해당 지표의 행동 성향이 뚜렷함을 나타냅니다.")
 
-        categories = [
-            f'E (외향: {e_ratio}%)', 
-            f'S (감각: {s_ratio}%)', 
-            f'T (사고: {t_ratio}%)', 
-            f'J (판단: {j_ratio}%)'
-        ]
-        values = [e_ratio, s_ratio, t_ratio, j_ratio]
-        
-        # 폐곡선 닫기
-        categories_closed = categories + [categories[0]]
-        values_closed = values + [values[0]]
+        # 중심점 (175, 175), 최대 반지름 R = 110
+        cx, cy, R = 175, 175, 110
+        pt_e = (cx, cy - (e_ratio / 100.0) * R)
+        pt_s = (cx + (s_ratio / 100.0) * R, cy)
+        pt_t = (cx, cy + (t_ratio / 100.0) * R)
+        pt_j = (cx - (j_ratio / 100.0) * R, cy)
+        poly_points = f"{pt_e[0]},{pt_e[1]} {pt_s[0]},{pt_s[1]} {pt_t[0]},{pt_t[1]} {pt_j[0]},{pt_j[1]}"
 
-        fig = go.Figure(data=go.Scatterpolar(
-            r=values_closed,
-            theta=categories_closed,
-            fill='toself',
-            fillcolor='rgba(16, 185, 129, 0.25)',
-            line=dict(color='#059669', width=2.5),
-            marker=dict(size=6, color='#047857')
-        ))
+        svg_chart = f"""
+        <div style="display: flex; justify-content: center; align-items: center; padding: 10px 0;">
+            <svg width="350" height="350" viewBox="0 0 350 350" style="background: transparent;">
+                <!-- 동심 사각형 그리드 -->
+                <polygon points="175,{175-R*0.25} {175+R*0.25},175 175,{175+R*0.25} {175-R*0.25},175" fill="none" stroke="#E2E8F0" stroke-width="1"/>
+                <polygon points="175,{175-R*0.5} {175+R*0.5},175 175,{175+R*0.5} {175-R*0.5},175" fill="none" stroke="#E2E8F0" stroke-width="1"/>
+                <polygon points="175,{175-R*0.75} {175+R*0.75},175 175,{175+R*0.75} {175-R*0.75},175" fill="none" stroke="#E2E8F0" stroke-width="1"/>
+                <polygon points="175,{175-R} {175+R},175 175,{175+R} {175-R},175" fill="none" stroke="#CBD5E1" stroke-width="1.5"/>
 
-        fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 100], ticksuffix='%', gridcolor='#E5E7EB'),
-                angularaxis=dict(gridcolor='#E5E7EB', linecolor='#D1D5DB')
-            ),
-            showlegend=False,
-            margin=dict(l=40, r=40, t=25, b=25),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            height=320
-        )
-        st.plotly_chart(fig, use_container_width=True)
+                <!-- 십자 가이드라인 -->
+                <line x1="175" y1="{175-R}" x2="175" y2="{175+R}" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="3,3"/>
+                <line x1="{175-R}" y1="175" x2="{175+R}" y2="175" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="3,3"/>
+
+                <!-- 4각형 영역 -->
+                <polygon points="{poly_points}" fill="rgba(16, 185, 129, 0.3)" stroke="#059669" stroke-width="2.5"/>
+
+                <!-- 데이터 포인트 -->
+                <circle cx="{pt_e[0]}" cy="{pt_e[1]}" r="4.5" fill="#047857"/>
+                <circle cx="{pt_s[0]}" cy="{pt_s[1]}" r="4.5" fill="#047857"/>
+                <circle cx="{pt_t[0]}" cy="{pt_t[1]}" r="4.5" fill="#047857"/>
+                <circle cx="{pt_j[0]}" cy="{pt_j[1]}" r="4.5" fill="#047857"/>
+
+                <!-- 축 라벨 -->
+                <text x="175" y="{175-R-12}" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">E (외향: {e_ratio}%)</text>
+                <text x="{175+R+10}" y="179" text-anchor="start" font-size="12" font-weight="700" fill="#065F46">S (감각: {s_ratio}%)</text>
+                <text x="175" y="{175+R+22}" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">T (사고: {t_ratio}%)</text>
+                <text x="{175-R-10}" y="179" text-anchor="end" font-size="12" font-weight="700" fill="#065F46">J (판단: {j_ratio}%)</text>
+            </svg>
+        </div>
+        """
+        st.markdown(svg_chart, unsafe_allow_html=True)
 
     # [3] 추천 직무 맞춤 채용공고 바로가기
     with st.container(border=True):
