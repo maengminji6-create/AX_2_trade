@@ -1,4 +1,6 @@
 import streamlit as st
+import streamlit.components.v1 as components
+import plotly.graph_objects as go
 
 # ---------------------------------------------------------
 # 1. 페이지 설정 및 세련된 연두/민트(Light Green & Mint) 스타일링
@@ -66,7 +68,7 @@ CUSTOM_CSS = """
     margin: 4px;
 }
 
-/* 상위 1~3순위 카드 그리드 스타일 */
+/* 상위 1~3순위 카드 그리드 */
 .top3-box {
     border-radius: 12px;
     padding: 16px;
@@ -106,7 +108,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     margin-bottom: 20px !important;
 }
 
-/* 일반 선택지 버튼 (연두색 호버) */
+/* 일반 선택지 버튼 */
 div.stButton > button {
     border-radius: 12px;
     font-weight: 600;
@@ -122,7 +124,7 @@ div.stButton > button:hover {
     color: #047857;
 }
 
-/* 메인 시작 버튼 (밝은 에메랄드/연두 그라데이션) */
+/* Primary 버튼 */
 div.stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #34D399 0%, #059669 100%) !important;
     color: #FFFFFF !important;
@@ -133,7 +135,6 @@ div.stButton > button[kind="primary"]:hover {
     background: linear-gradient(135deg, #10B981 0%, #047857 100%) !important;
 }
 
-/* 프로그레스 바 색상 커스텀 */
 .stProgress > div > div > div > div {
     background-color: #10B981 !important;
 }
@@ -241,7 +242,7 @@ MBTI_DIM_DETAILS = {
 }
 
 # ---------------------------------------------------------
-# 3. 20문항 데이터 (직무 가중치 + MBTI 지표 매핑)
+# 3. 20문항 데이터
 # ---------------------------------------------------------
 QUESTIONS = [
     # 1. 커뮤니케이션 성향 (E ↔ I)
@@ -426,11 +427,10 @@ if "mbti_counts" not in st.session_state:
     st.session_state.mbti_counts = {"E": 0, "I": 0, "S": 0, "N": 0, "T": 0, "F": 0, "J": 0, "P": 0}
 
 # ---------------------------------------------------------
-# 5. PAGE 01 — HOME (강화된 도메인 디자인)
+# 5. PAGE 01 — HOME
 # ---------------------------------------------------------
 if st.session_state.step == "home":
     with st.container(border=True):
-        # 도메인 감성 이모지 바
         st.markdown(
             """
             <div style="text-align: center; margin-top: 14px; margin-bottom: 8px;">
@@ -445,7 +445,6 @@ if st.session_state.step == "home":
         st.markdown('<div class="main-title">TRADE-MBTI</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-title">20개의 글로벌 무역 실무 상황으로 진단하는 나의 직무 성향</div>', unsafe_allow_html=True)
 
-        # 직무 도메인 배지 태그 리스트
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 24px;">
@@ -465,7 +464,7 @@ if st.session_state.step == "home":
             <p style="color: #4B5563; line-height: 1.75; max-width: 540px; margin: 0 auto 32px auto; text-align: center; font-size: 0.96rem;">
             신용장(L/C), 포워더 선복 부킹, 통관 규제, 원가 네고 등<br>
             실제 무역 현장의 20가지 딜레마를 분석하여<br>
-            <b>최적 직무(1위)와 확장 직무(2·3위)</b>, 그리고 <b>MBTI 4축 실무 리포트</b>를 도출합니다.
+            <b>최적 직무(1위)와 확장 직무(2·3위)</b>, 그리고 <b>MBTI 4축 레이더 분석</b>을 도출합니다.
             </p>
             """,
             unsafe_allow_html=True
@@ -529,9 +528,12 @@ elif st.session_state.step == "test":
             st.rerun()
 
 # ---------------------------------------------------------
-# 7. PAGE 03 & 04 — RESULT & PODIUM TOP 1~3 & DETAIL
+# 7. PAGE 03 & 04 — RESULT
 # ---------------------------------------------------------
 elif st.session_state.step == "result":
+    # 빵빠레 효과 연출
+    st.balloons()
+
     scores = st.session_state.scores
     mbti_counts = st.session_state.mbti_counts
     max_possible_raw = max(scores.values()) if max(scores.values()) > 0 else 1
@@ -548,35 +550,123 @@ elif st.session_state.step == "result":
         score_pct = max(score_pct, 48)
         normalized_scores[job] = score_pct
 
+    # MBTI 4대 지표 비율 산출 (각 축 5문항 기준)
+    e_ratio = int((mbti_counts["E"] / 5) * 100)
+    s_ratio = int((mbti_counts["S"] / 5) * 100)
+    t_ratio = int((mbti_counts["T"] / 5) * 100)
+    j_ratio = int((mbti_counts["J"] / 5) * 100)
+
     mbti_res = ""
     mbti_res += "E" if mbti_counts["E"] >= mbti_counts["I"] else "I"
     mbti_res += "S" if mbti_counts["S"] >= mbti_counts["N"] else "N"
     mbti_res += "T" if mbti_counts["T"] >= mbti_counts["F"] else "F"
     mbti_res += "J" if mbti_counts["J"] >= mbti_counts["P"] else "P"
 
-    # [1] 1순위 대표 직무 카드
+    # [1] 1순위 대표 직무 카드 (캡처 대상 영역)
     with st.container(border=True):
-        st.markdown('<p style="text-align: center; letter-spacing: 0.15em; font-weight: 700; color: #059669; font-size: 0.85rem; margin-top: 10px; margin-bottom: 6px;">✦ YOUR BEST TRADE TYPE ✦</p>', unsafe_allow_html=True)
-        st.markdown(f'<div style="text-align: center; font-size: 3.4rem; margin: 4px 0;">{top_job_meta["icon"]}</div>', unsafe_allow_html=True)
-        st.markdown(f'<h1 style="text-align: center; font-size: 2.1rem; color: #064E3B; margin-bottom: 4px;">{top1_name}형 ({mbti_res})</h1>', unsafe_allow_html=True)
-        st.markdown(f'<p style="text-align: center; color: #4B5563; font-weight: 600; font-size: 1.05rem; margin-bottom: 20px;">"{top_job_meta["tagline"]}"</p>', unsafe_allow_html=True)
-
         st.markdown(
             f"""
-            <div style="background-color: #ECFDF5; border-radius: 12px; padding: 18px; text-align: left; margin-bottom: 18px; border: 1px solid #A7F3D0;">
-                <p style="color: #065F46; line-height: 1.6; margin: 0; font-size: 0.95rem;">
-                    {top_job_meta["desc"]}
-                </p>
+            <div id="capture-area" style="background-color: #FFFFFF; padding: 20px; border-radius: 12px;">
+                <p style="text-align: center; letter-spacing: 0.15em; font-weight: 700; color: #059669; font-size: 0.85rem; margin: 0 0 6px 0;">✦ YOUR BEST TRADE TYPE ✦</p>
+                <div style="text-align: center; font-size: 3.4rem; margin: 4px 0;">{top_job_meta["icon"]}</div>
+                <h1 style="text-align: center; font-size: 2.1rem; color: #064E3B; margin: 0 0 4px 0;">{top1_name}형 ({mbti_res})</h1>
+                <p style="text-align: center; color: #4B5563; font-weight: 600; font-size: 1.05rem; margin-bottom: 20px;">"{top_job_meta["tagline"]}"</p>
+                <div style="background-color: #ECFDF5; border-radius: 12px; padding: 18px; text-align: left; margin-bottom: 18px; border: 1px solid #A7F3D0;">
+                    <p style="color: #065F46; line-height: 1.6; margin: 0; font-size: 0.95rem;">
+                        {top_job_meta["desc"]}
+                    </p>
+                </div>
+                <div style="text-align: center; margin-bottom: 8px;">
+                    {''.join([f'<span class="strength-tag">#{s}</span>' for s in top_job_meta["strengths"]])}
+                </div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        st.markdown('<p style="text-align: center; font-size: 0.85rem; font-weight: 700; color: #374151; margin-bottom: 6px;">✦ MY KEY STRENGTHS ✦</p>', unsafe_allow_html=True)
-        strengths_html = "".join([f'<span class="strength-tag">#{s}</span>' for s in top_job_meta["strengths"]])
-        st.markdown(f'<div style="text-align: center; margin-bottom: 8px;">{strengths_html}</div>', unsafe_allow_html=True)
+        # 결과지 이미지 다운로드 (html2canvas)
+        components.html(
+            """
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+            <div style="text-align: center; margin-top: 10px;">
+                <button id="download-btn" style="background-color: #10B981; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);">
+                    📸 결과 카드 이미지 저장하기
+                </button>
+            </div>
+            <script>
+            document.getElementById('download-btn').addEventListener('click', function() {
+                const target = window.parent.document.getElementById('capture-area');
+                if (target) {
+                    html2canvas(target, { scale: 2 }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = 'trade_mbti_result.png';
+                        link.href = canvas.toDataURL('image/png');
+                        link.click();
+                    });
+                }
+            });
+            </script>
+            """,
+            height=60
+        )
 
-    # [2] 상위 1, 2, 3순위 직무 추천 카드 (신규 추가)
+    # [2] 4축 레이더 차트 (MBTI 성향 가시화)
+    with st.container(border=True):
+        st.markdown('<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; color: #064E3B;">🧭 나의 무역 MBTI 성향 다이어그램</h3>', unsafe_allow_html=True)
+        st.caption("각 축의 100%에 가까울수록 해당 지표의 행동 성향이 뚜렷함을 나타냅니다.")
+
+        categories = [
+            f'E (외향: {e_ratio}%)', 
+            f'S (감각: {s_ratio}%)', 
+            f'T (사고: {t_ratio}%)', 
+            f'J (판단: {j_ratio}%)'
+        ]
+        values = [e_ratio, s_ratio, t_ratio, j_ratio]
+        
+        # 폐곡선 닫기
+        categories_closed = categories + [categories[0]]
+        values_closed = values + [values[0]]
+
+        fig = go.Figure(data=go.Scatterpolar(
+            r=values_closed,
+            theta=categories_closed,
+            fill='toself',
+            fillcolor='rgba(16, 185, 129, 0.25)',
+            line=dict(color='#059669', width=2.5),
+            marker=dict(size=6, color='#047857')
+        ))
+
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 100], ticksuffix='%', gridcolor='#E5E7EB'),
+                angularaxis=dict(gridcolor='#E5E7EB', linecolor='#D1D5DB')
+            ),
+            showlegend=False,
+            margin=dict(l=40, r=40, t=25, b=25),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=320
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # [3] 추천 직무 맞춤 채용공고 바로가기
+    with st.container(border=True):
+        st.markdown(f'<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; color: #064E3B;">💼 {top1_name} 실시간 채용공고 보러가기</h3>', unsafe_allow_html=True)
+        st.caption(f"주요 채용 포털의 실시간 '{top1_name}' 공고를 즉시 확인해 보세요.")
+
+        url_saramin = f"https://www.saramin.co.kr/zf_user/search?searchword={top1_name}"
+        url_jobkorea = f"https://www.jobkorea.co.kr/Search/?stext={top1_name}"
+        url_wanted = f"https://www.wanted.co.kr/search?query={top1_name}"
+
+        link_col1, link_col2, link_col3 = st.columns(3)
+        with link_col1:
+            st.link_button("사람인 공고 🔗", url_saramin, use_container_width=True)
+        with link_col2:
+            st.link_button("잡코리아 공고 🔗", url_jobkorea, use_container_width=True)
+        with link_col3:
+            st.link_button("원티드 공고 🔗", url_wanted, use_container_width=True)
+
+    # [4] 상위 1, 2, 3순위 직무 추천
     with st.container(border=True):
         st.markdown('<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; color: #064E3B;">🏆 나의 TOP 3 추천 직무 포트폴리오</h3>', unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
@@ -620,9 +710,7 @@ elif st.session_state.step == "result":
                 unsafe_allow_html=True
             )
 
-        st.caption(f"💡 **커리어 인사이트:** 메인 목표인 **{top1_name}** 직무 외에도, 유사 역량을 공유하는 **{top2_name}** 및 **{top3_name}** 직무로의 교차 지원 및 업무 확장이 유효합니다.")
-
-    # [3] 6대 직무 전체 적합도 그래프
+    # [5] 6대 직무 전체 적합도 그래프
     with st.container(border=True):
         st.markdown('<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; color: #064E3B;">📊 6대 무역 직무 적합도 비교</h3>', unsafe_allow_html=True)
         for rank, (job, pct) in enumerate(normalized_scores.items(), 1):
@@ -634,7 +722,7 @@ elif st.session_state.step == "result":
                 st.progress(pct / 100)
                 st.caption(f"적합도 **{pct}%**")
 
-    # [4] MBTI 4축 실무 리포트
+    # [6] MBTI 4축 실무 리포트
     with st.container(border=True):
         st.markdown(f'<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; color: #064E3B;">🧭 무역 실무 성향 리포트 ({mbti_res})</h3>', unsafe_allow_html=True)
         st.markdown('<p style="color: #4B5563; font-size: 0.9rem; margin-bottom: 20px;">자기소개서 작성 및 면접 시 아래 실무 강점과 보완 포인트를 활용하세요.</p>', unsafe_allow_html=True)
@@ -658,7 +746,7 @@ elif st.session_state.step == "result":
                 unsafe_allow_html=True
             )
 
-    # [5] 1위 직무 실무 업무 카드
+    # [7] 1위 직무 실무 업무 카드
     with st.container(border=True):
         st.markdown(f'<h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; color: #064E3B;">💡 {top1_name} 추천 실무 업무</h3>', unsafe_allow_html=True)
         for task in top_job_meta["tasks"]:
